@@ -129,6 +129,6 @@ to adjust for the border using a different method */
 }
 
 a-scene {
-    height: 355px;
-    width: 480px;
+    height: 360px !important;
+    width: 480px !important;
 }
