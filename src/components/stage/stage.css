@@ -128,7 +128,7 @@ to adjust for the border using a different method */
     pointer-events: auto;
 }
 
-a-scene {
+/* a-scene {
     height: 360px !important;
     width: 480px !important;
-}
+} */
