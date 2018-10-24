@@ -127,8 +127,3 @@ to adjust for the border using a different method */
 .question-wrapper {
     pointer-events: auto;
 }
-
-/* a-scene {
-    height: 360px !important;
-    width: 480px !important;
-} */
