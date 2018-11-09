@@ -63,6 +63,15 @@ class Stage extends React.Component {
         this.props.vm.attachV2SVGAdapter(new V2SVGAdapter());
         this.props.vm.attachV2BitmapAdapter(new V2BitmapAdapter());
         this.props.vm.setVideoProvider(new VideoProvider());
+        
+        var channel = new BroadcastChannel('stage-image');
+        this.renderer.on('RENDERER_WILL_DRAW', () => {
+            this.renderer.requestSnapshot((imgData) => {
+                channel.postMessage({
+                    dataURI: imgData
+                });
+            });
+        });
     }
     componentDidMount () {
         this.attachRectEvents();
