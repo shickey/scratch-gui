@@ -18,9 +18,16 @@
     margin: 0 auto;
     display: block;
   }
+  
+  #fullscreen-btn {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
 </style>
 <body>
   <img src="#" id="stage" />
+  <button id="fullscreen-btn" onclick="document.getElementById('stage').webkitRequestFullscreen()">Fullscreen</button>
 </body>
 <script type="text/javascript">
   
