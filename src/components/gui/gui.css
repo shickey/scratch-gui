@@ -241,6 +241,7 @@
     background: $motion-primary;
 
     border: 1px solid $motion-primary;
+    border-bottom-left-radius: $space;
     box-sizing: content-box; /* To match scratch-block vertical toolbox borders */
 }
 
@@ -316,5 +317,33 @@ $fade-out-distance: 15px;
     This CSS class is automatically added to the body when react-modal is open
 */
 :global(.ReactModal__Body--open) {
+    overflow: hidden;
+}
+
+/********************************************
+ *
+ * Stuff added by Sean
+ *
+ ********************************************/
+
+.blocksWrapperWrapper {
+    position: relative;
+    display: flex;
+    flex-grow: 2;
+}
+
+.extensionEditorWrapper {
+    display: flex;
+    flex-grow: 1;
+    padding-right: $space;
+}
+
+.extensionEditor {
+    width: 100%;
+    height: 100%;
+    border: 1px solid $ui-black-transparent;
+    border-top-right-radius: $space;
+    border-bottom-right-radius: $space;
+    background-color: $ui-white;
     overflow: hidden;
 }

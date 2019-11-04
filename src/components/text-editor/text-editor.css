@@ -1,0 +1,19 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.extension-editor-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.extension-editor-header {
+  height: 10%;
+}
+
+.extension-editor-text-area {
+  position: relative;
+  height: 90%;
+  width: 100%;
+}

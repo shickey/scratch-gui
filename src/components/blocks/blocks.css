@@ -25,8 +25,9 @@
     bottom: 0;
     left: 0;
     border: 1px solid $ui-black-transparent;
-    border-top-right-radius: $space;
-    border-bottom-right-radius: $space;
+    border-radius: $space;
+    /*border-top-right-radius: $space;
+    border-bottom-right-radius: $space;*/
 }
 
 [dir="rtl"] .blocks :global(.injectionDiv) {

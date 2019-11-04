@@ -59,7 +59,25 @@ const base = {
             }
         },
         {
+            test: /node_modules\/codemirror\/.*\.css$/,
+            use: [
+                'style-loader',
+                'css-loader'
+            ]
+        },
+        {
+            test: /src\/components\/text-editor\/codemirror-overrides\.css$/,
+            use: [
+                'style-loader',
+                'css-loader'
+            ]
+        },
+        {
             test: /\.css$/,
+            exclude: [
+                path.resolve(__dirname, 'node_modules/codemirror'),
+                path.resolve(__dirname, 'src/components/text-editor/codemirror-overrides.css')
+            ],
             use: [{
                 loader: 'style-loader'
             }, {
