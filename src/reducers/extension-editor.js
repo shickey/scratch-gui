@@ -106,7 +106,7 @@ function afternoonBool() {
 //@reporter(random taco)
 function randomTaco() {
   // Connect to an API to get data into Scratch
-  return fetch('http://taco-randomizer.herokuapp.com/random/')
+  return fetch('https://taco-randomizer.herokuapp.com/random/')
     .then((resp) => resp.json()).then((json) => {
     var tacoParts = json;
     return \`\${tacoParts.base_layer.name} with \${tacoParts.mixin.name}, garnished with \${tacoParts.condiment.name} topped off with \${tacoParts.seasoning.name} and wrapped in delicious \${tacoParts.shell.name}\`;
