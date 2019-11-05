@@ -14,3 +14,6 @@
   height: 100%;
 }
 
+.CodeMirror-scroll {
+  margin-right: 0;
+}
