@@ -1,32 +1,39 @@
-const extensionDecl = function(blocks, imps, id) {
+const extensionDecl = function(externals, internals, initializer, blockDecls, blockImps) {
   return (
-`class MyExtension {
+`
+${externals.join('\n')}
+
+class MyExtension {
+  ${initializer ? initializer : ""}
+
   getInfo() {
     return {
       id: 'myExtension',
       name: 'Test Extension',
-      blocks: [${blocks.join(',')}]
+      blocks: [${blockDecls.join(',')}]
     }
   }
   
-  ${imps.join('\n\n')}
+  ${blockImps.join('\n\n')}
+
+  ${internals.join('\n\n')}
 }
 
 Scratch.extensions.register(new MyExtension());`
   )
 }
 
-const blockDecl = function(annotation) {
+const blockDecl = function(opcode, type, label, args) {
   var block = {
-    opcode: annotation.opcode,
-    blockType: annotation.type,
-    text: annotation.text,
+    opcode: opcode,
+    blockType: type,
+    text: label,
     arguments: {}
   };
 
-  for (var argName in annotation.args) {
+  for (var argName in args) {
     block.arguments[argName] = {
-      type: annotation.args[argName]
+      type: args[argName]
     };
   }
 
