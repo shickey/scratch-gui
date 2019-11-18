@@ -112,6 +112,52 @@ function randomTaco() {
     return \`\${tacoParts.base_layer.name} with \${tacoParts.mixin.name}, garnished with \${tacoParts.condiment.name} topped off with \${tacoParts.seasoning.name} and wrapped in delicious \${tacoParts.shell.name}\`;
   });
 }
+
+/******************************
+
+# Globals
+
+Any statement declared outside on an annotated function
+(including non-annotated functions) will run in the 
+global context *before* the extension code is loaded
+and executed. You can use this to create global state
+for an extension. E.g.,
+******************************/
+
+var globalStr = "This string is accessible globally!"
+
+//@reporter(global string)
+function globalStrReporter() {
+    // Use the global state inside extension code
+    return globalStr;
+}
+
+/******************************
+
+# Internals
+
+In addition to globals, you can also declare functions
+within your extension that do *not* represent blocks. For
+example, you might want a helper function accesible within
+your extension. To declare such a function, annotate it with:
+
+    //@internal
+
+******************************/
+
+// The following declares a new function inside the extension
+// which *doesn't* represent a block
+//@internal
+function internalAddFive(num) {
+    return num + 5;
+}
+
+// Now create a block that calls the internal function
+//@reporter(add five [val:NUMBER])
+function addFiveReporter(val) {
+    // Use \`this\` to access internal functions
+    return this.internalAddFive(val);
+}
 `
 };
 

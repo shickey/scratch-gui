@@ -40,22 +40,21 @@ class TextEditor extends React.Component {
       // Load code into VM
       var vm = this.props.vm
       var extensionCode = createExtensionCode(parsed);
-      console.log(extensionCode);
-      // if(!!vm) {
-      //   var dataUri = `data:text/javascript,${extensionCode};`;
-      //   var extensionManager = vm.extensionManager;
-      //   if (this.extensionId === undefined) {
-      //     extensionManager.loadExtensionURL(dataUri).then((extensionId) => {
-      //       this.extensionId = extensionId;
-      //       console.log(`extension loaded with id ${this.extensionId}`);
-      //     }).catch((e) => { console.log("Error: " + e);})
-      //   }
-      //   else {
-      //     extensionManager.reloadExtensionURL(this.extensionId, dataUri).then(() => {
-      //       console.log("extension reloaded");
-      //     }).catch((e) => { console.log("Error: " + e);})
-      //   }
-      // }
+      if(!!vm) {
+        var dataUri = `data:text/javascript,${extensionCode};`;
+        var extensionManager = vm.extensionManager;
+        if (this.extensionId === undefined) {
+          extensionManager.loadExtensionURL(dataUri).then((extensionId) => {
+            this.extensionId = extensionId;
+            console.log(`extension loaded with id ${this.extensionId}`);
+          }).catch((e) => { console.log("Error: " + e);})
+        }
+        else {
+          extensionManager.reloadExtensionURL(this.extensionId, dataUri).then(() => {
+            console.log("extension reloaded");
+          }).catch((e) => { console.log("Error: " + e);})
+        }
+      }
     }
   }
 
