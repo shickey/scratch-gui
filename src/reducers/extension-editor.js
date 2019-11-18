@@ -115,13 +115,39 @@ function randomTaco() {
 
 /******************************
 
+# Initializers
+
+You can declare a function to run as an initializer
+(i.e., constructor) for your extension using the annotation
+
+    //@init
+
+An initializer takes no arguments and will run as the
+constructor for the extension. This way, you can do things
+like declare extension-local state.
+******************************/
+
+//@init
+function extensionInit() {
+    // Declare an extension-local variable
+    this.myVar = "1234";
+}
+
+//@reporter(initialized myVar value)
+function myVarValue() {
+    // Now access the extension-local variable
+    return this.myVar;
+}
+
+/******************************
+
 # Globals
 
 Any statement declared outside on an annotated function
-(including non-annotated functions) will run in the 
-global context *before* the extension code is loaded
-and executed. You can use this to create global state
-for an extension. E.g.,
+(including non-annotated function declarations) will run
+in the  global context *before* the extension code is
+loaded and executed. You can use this to create global
+state for an extension. E.g.,
 ******************************/
 
 var globalStr = "This string is accessible globally!"
