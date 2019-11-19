@@ -38,7 +38,8 @@ const parseAnnotatedExtension = function(annotatedExtension) {
       if (blockAnnotationMatches) {
         // Parse the block text for arguments
         var blockText = blockAnnotationMatches[2];
-        var argRegex = /\[([a-zA-Z_]+)\:(ANGLE|BOOLEAN|COLOR|NUMBER|STRING|MATRIX|NOTE)+\]/g; // We don't support 'IMAGE' type
+        // @TODO: Check for more general argument errors (e.g., an untyped argument [foo])
+        var argRegex = /\[([a-zA-Z_]+)\:([a-zA-Z0-9_ ]+)\]/g; // We don't support 'IMAGE' type
         var argumentMatches = blockText.matchAll(argRegex);
         var args = {};
         for (const match of argumentMatches) {
@@ -51,7 +52,15 @@ const parseAnnotatedExtension = function(annotatedExtension) {
             case 'STRING': args[match[1]] = ArgumentType.STRING; break;
             case 'MATRIX': args[match[1]] = ArgumentType.MATRIX; break;
             case 'NOTE': args[match[1]] = ArgumentType.NOTE; break;
-            default: throw createParseError(`Unknown annotation argument type '${type}'`, comment.loc)
+            default: {
+              //                3 for //@                              2 for ( and [         1 for :
+              var columnStart = 3 + blockAnnotationMatches[1].length + 2 + match[1].length + 1 + match.index;
+              var argumentLoc = {
+                start: {line: comment.loc.start.line - 1, column: columnStart},
+                end: {line: comment.loc.end.line - 1, column: columnStart + match.length}
+              };
+              throw createParseError(`Unknown annotation argument type '${type}'. Must be one of: ANGLE, BOOLEAN, COLOR, NUMBER, STRING, MATRIX, NOTE`, argumentLoc);
+            }
           }
         }
 
@@ -79,7 +88,10 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
         if (annotatedFuncIdx === -1) {
           // No matching function was found
-          throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, block.loc);
+          var annotationLoc = block.loc
+          annotationLoc.start.line--;
+          annotationLoc.end.line--;
+          throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
         }
         
         var annotatedFunc = mutableStatements[annotatedFuncIdx];
@@ -89,17 +101,17 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
         var argNames = Object.keys(block.args);
         if (argNames.length !== annotatedFunc.params.length) {
-          throw createParseError(`Annotation requires exactly ${argNames.length} arguments, but ${annotatedFunc.params.length} were given in the function.`, block.loc); // @TODO: Fix line numbers
+          throw createParseError(`Annotation requires exactly ${argNames.length} arguments, but ${annotatedFunc.params.length} were given in the function.`, block.loc);
         }
         annotatedFunc.params.forEach(param => {
           if (param.type != "Identifier") {
-            throw createParseError(`Annotated functions can only take named parameters (no default values or rest parameters)`, block.loc); // @TODO: Fix line numbers
+            throw createParseError(`Annotated functions can only take named parameters (no default values or rest parameters)`, block.loc);
           }
         });
         var paramNames = annotatedFunc.params.map(param => param.name);
         argNames.forEach(argName => {
           if (paramNames.indexOf(argName) == -1) {
-            throw createParseError(`Annotated function is missing argument ${argName}`, block.loc); // @TODO: Fix line numbers
+            throw createParseError(`Annotated function is missing argument "${argName}"`, block.loc);
           }
         });
 
@@ -121,12 +133,18 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
           if (annotatedFuncIdx === -1) {
             // No matching function was found
-            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, comment.loc);
+            var annotationLoc = comment.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
           }
 
           if (extensionInfo.initializer !== null) {
             // Multiple initializers were declared
-            throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, comment.loc);
+            var annotationLoc = comment.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, annotationLoc);
           }
           
           extensionInfo.initializer = mutableStatements[annotatedFuncIdx];
@@ -145,7 +163,10 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
             if (annotatedFuncIdx === -1) {
               // No matching function was found
-              throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, comment.loc);
+              var annotationLoc = comment.loc
+              annotationLoc.start.line--;
+              annotationLoc.end.line--;
+              throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
             }
             
             extensionInfo.internals.push(mutableStatements[annotatedFuncIdx]);
@@ -167,6 +188,18 @@ const parseAnnotatedExtension = function(annotatedExtension) {
     };
   }
   catch(e) {
+    if (e.hasOwnProperty('lineNumber')) {
+      // Error thrown by esprima
+      // Turn it into the same format as our parsing errors
+      var errorLoc = {
+        start: {line: e.lineNumber - 1, column: e.column - 1},
+        end:   {line: e.lineNumber - 1, column: e.column}
+      };
+      return {
+        parsed: null,
+        error: createParseError(e.description, errorLoc)
+      }
+    }
     return {
       parsed: null,
       error: e

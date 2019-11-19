@@ -13,6 +13,8 @@ import {
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/monokai.css';
 import 'codemirror/mode/javascript/javascript.js';
+import 'codemirror/addon/lint/lint.css';
+import 'codemirror/addon/lint/lint.js';
 
 import {Controlled as CodeMirror} from 'react-codemirror2';
 
@@ -20,12 +22,12 @@ import styles from './text-editor.css';
 import overrides from './codemirror-overrides.css';
 
 
-
 class TextEditor extends React.Component {
   constructor(props) {
     super(props);
     this.extensionId = undefined;
     this.loadExtensionIntoVm = this.loadExtensionIntoVm.bind(this);
+    this.lint = this.lint.bind(this);
     if(!!props.vm) {
       window.vm = props.vm;
     }
@@ -58,6 +60,21 @@ class TextEditor extends React.Component {
     }
   }
 
+  lint(text) {
+    var {parsed, error} = parseAnnotatedExtension(text);
+    if (error !== null) {
+      if (error.hasOwnProperty('loc')) {
+        var loc = error.loc;
+        return [{
+          from: { line: loc.start.line, ch: loc.start.column, sticky: null }, // @TODO: Fix. This just matches the spec for CodeMirror.Pos structure, which could change I suppose
+          to:   { line: loc.end.line, ch: loc.end.column, sticky: null },
+          message: error.message
+        }];
+      }
+    }
+    return [];
+  }
+
   render() {
     return (
       <Box className={styles.extensionEditorContainer}>
@@ -67,8 +84,9 @@ class TextEditor extends React.Component {
             options={{
               mode: "javascript",
               theme: "monokai",
-              lineNumbers: true,
-              scrollbarStyle: "null"
+              scrollbarStyle: "null",
+              gutters: ["CodeMirror-lint-markers"],
+              lint: this.lint
             }}
             onBeforeChange={(editor, data, value) => {
               this.props.onUpdateExtensionJs(value)
