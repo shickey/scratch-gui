@@ -25,7 +25,8 @@ const parseAnnotatedExtension = function(annotatedExtension) {
       initializer: null,
       blocks: [],
       internals: [],
-      externals: []
+      externals: [],
+      menus: {}
     }
 
     comments.forEach(comment => {
@@ -121,41 +122,49 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
         extensionInfo.blocks.push(block);
       }
-
       else {
-        // Check for block annotation
-        var initializerAnnotationMatches = comment.value.match(/^@init\s*$/);
-        if (initializerAnnotationMatches) {
-          // Find the function for this annotation in the parse tree
-          var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
-            return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
+        var menuAnnotationMatches = comment.value.match(/^@menu\(([a-zA-Z_][a-zA-Z_0-9]*)\)$/);
+        if (menuAnnotationMatches) {
+          // @TODO: Check for menu overwriting, nameless menus, probably more stuff
+
+          var foundDecl = false;
+          // First, check if the annotation is attached to a raw array declaration
+          var annotatedArrayIdx = mutableStatements.findIndex((statement) => {
+            return statement.type == "ExpressionStatement" && statement.expression.type == "ArrayExpression" && statement.loc.start.line == comment.loc.start.line + 1;
           });
 
-          if (annotatedFuncIdx === -1) {
-            // No matching function was found
-            var annotationLoc = comment.loc
-            annotationLoc.start.line--;
-            annotationLoc.end.line--;
-            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
+          if (annotatedArrayIdx !== -1) {
+            foundDecl = true;
+            extensionInfo.menus[menuAnnotationMatches[1]] = mutableStatements[annotatedArrayIdx];
+            mutableStatements.splice(annotatedArrayIdx, 1); // Remove the array decl from the statements array
           }
 
-          if (extensionInfo.initializer !== null) {
-            // Multiple initializers were declared
-            var annotationLoc = comment.loc
-            annotationLoc.start.line--;
-            annotationLoc.end.line--;
-            throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, annotationLoc);
-          }
-          
-          extensionInfo.initializer = mutableStatements[annotatedFuncIdx];
+          // @TODO : Reenable this eventually when VM supports dynamic menu function calls through web workers
+          // 
+          // // If not, check to see if it's attached to a function
+          // if (!foundDecl) {
+          //   var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
+          //     return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
+          //   });
+          //   if (annotatedFuncIdx !== -1) {
+          //     foundDecl = true;
+          //     extensionInfo.menus[menuAnnotationMatches[1]] = mutableStatements[annotatedFuncIdx];
+          //     mutableStatements.splice(annotatedFuncIdx, 1); // Remove the function decl from the statements array
+          //   }            
+          // }
 
-          // Remove the function from the array
-          mutableStatements.splice(annotatedFuncIdx, 1);
+          // Otherwise, error out
+          if (!foundDecl) {
+            var annotationLoc = comment.loc
+              annotationLoc.start.line--;
+              annotationLoc.end.line--;
+              throw createParseError(`Menu annotation must be attached to an array. (The array must start on the next line immediately after the annotation).`, annotationLoc);
+          }
         }
-
         else {
-          var internalAnnotationMatches = comment.value.match(/^@internal\s*$/);
-          if (internalAnnotationMatches) {
+          // Check for block annotation
+          var initializerAnnotationMatches = comment.value.match(/^@init\s*$/);
+          if (initializerAnnotationMatches) {
             // Find the function for this annotation in the parse tree
             var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
               return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
@@ -168,11 +177,42 @@ const parseAnnotatedExtension = function(annotatedExtension) {
               annotationLoc.end.line--;
               throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
             }
+
+            if (extensionInfo.initializer !== null) {
+              // Multiple initializers were declared
+              var annotationLoc = comment.loc
+              annotationLoc.start.line--;
+              annotationLoc.end.line--;
+              throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, annotationLoc);
+            }
             
-            extensionInfo.internals.push(mutableStatements[annotatedFuncIdx]);
+            extensionInfo.initializer = mutableStatements[annotatedFuncIdx];
 
             // Remove the function from the array
             mutableStatements.splice(annotatedFuncIdx, 1);
+          }
+
+          else {
+            var internalAnnotationMatches = comment.value.match(/^@internal\s*$/);
+            if (internalAnnotationMatches) {
+              // Find the function for this annotation in the parse tree
+              var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
+                return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
+              });
+
+              if (annotatedFuncIdx === -1) {
+                // No matching function was found
+                var annotationLoc = comment.loc
+                annotationLoc.start.line--;
+                annotationLoc.end.line--;
+                throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
+              }
+              
+              extensionInfo.internals.push(mutableStatements[annotatedFuncIdx]);
+
+              // Remove the function from the array
+              mutableStatements.splice(annotatedFuncIdx, 1);
+            }
           }
         }
       }
@@ -245,7 +285,33 @@ const createExtensionCode = function(extensionInfo) {
     return code;
   });
 
-  return jsBeautify(extensionDecl(externals, internals, initializer, blockDecls, blockImps));
+  var menusDecls = [];
+  var menuFuncs = [];
+  for (var menuName in extensionInfo.menus) {
+    var menuImp = extensionInfo.menus[menuName];
+    if (menuImp.type == "ExpressionStatement") { // Menu is an array
+      var code = escodegen.generate(menuImp);
+      if (code.endsWith(";")) {
+        code = code.slice(0, -1);
+      }
+      menusDecls.push(`${menuName}: ${code}`);
+    }
+    else if (menuImp.type == "FunctionDeclaration") {
+      menusDecls.push(`${menuName}: {items: '_menu_${menuName}'}`);
+      menuImp.id.name = `_menu_${menuName}`;
+      var code = escodegen.generate(menuImp);
+      if (code.startsWith("function ")) {
+        // Remove the function keyword since we're putting it into a class
+        code = code.slice(9);
+      }
+      menuFuncs.push(code);
+    }
+    else { console.log("ERROR: Unknown menu implementation type"); }
+  }
+
+  var menusDecl = `{${menusDecls.join(',\n')}}`;
+
+  return jsBeautify(extensionDecl(externals, internals, initializer, blockDecls, blockImps, menusDecl, menuFuncs));
 }
 
 export {

@@ -22,6 +22,12 @@ what kind of parameters it takes. E.g.,
 Putting it all together:
 *******************************/
 
+//@menu(foo)
+[
+  {text: "one",   value: "1"},
+  {text: "two",   value: "2"},
+  {text: "three", value: "3"}
+]
 
 
 //@reporter(Hello [name:STRING])
