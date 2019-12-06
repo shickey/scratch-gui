@@ -17,7 +17,6 @@ const ANNOTATION = {
   menu: 'menu'
 }
 
-
 const tokenizeAnnotation = function(annotation) {
   
   var tokenizer = {
@@ -335,6 +334,7 @@ const parseAnnotationTokens = function(tokens) {
     }
     
     return {
+      type: 'block',
       text: blockText,
       args: blockArgs
     };
@@ -421,7 +421,7 @@ const parseAnnotationTokens = function(tokens) {
       var blockType = tokenStream.current.value;
       var {error, ...block} = parseBlockAnnotation(tokenStream);
       if (error) { return {error}; }
-      block.type = blockType;
+      block.blockType = blockType;
       return block;
       break;
     case 'menu':
@@ -443,65 +443,81 @@ const parseAnnotationTokens = function(tokens) {
   return {};
           
 }
-  
-var testAnnotations = [
-  '@hello(foo is bar[arg:TYPE])',
-  '@foo',
-  'sdfhu',
-  '  @reporter ( foo sfw wue   weif [ arg  : tyype]  ) ',
-  '  @reporter ( foo sfw wue   weif [ arg  : NUMBER]  ) ',
-  '@sdfbn/eiabn:()DF""',
-  '[[[[[[[[[[[[))))((((((((:shfuasnf123',
-  '@command(name of command [foo:STRING] continued name)',
-  ' @menu(foo) ',
-  ' @menu ( foo    )',
-  ' @menu ( foo    )   sdf',
-  '@menu(%$!adkf)',
-  '@menu( 89_foo)',
-  '@menu(89_foo)',
-  '@menu(_foo89)',
-  '@init',
-  '@init()',
-  '@init(foo)',
-  '@internal',
-  '@internal()',
-  '@command(name of command [foo:STRING:default string val] continued name [second:NUMBER] more name)',
-  '@command(name of command [foo:MENU])',
-  '@command(name of command [foo:MENU:])',
-  '@command(name of command [foo:MENU:8123])',
-  '@command(name of command [foo:MENU:bar])',
-  '@command(name of command [foo:MENU:  bar ])',
-]
 
-var testNum = 1;
-testAnnotations.forEach(ann => {
-  console.log('----------------------------');
-  console.log(`Test ${testNum}`);
-  console.log('~~~~~~~~~~~~~~~');
-  console.log(`${ann}`)
-  // console.log(`Lexing...`)
-  var {tokens, error} = tokenizeAnnotation(ann);
-  if (error) {
-    console.log(`ERROR: ${error.message}`);
-    console.log(`${ann}`);
-    console.log(`${' '.repeat(error.location.start)}^~~~`);
-  }
-  else {
-    // console.log('Lexing successful\n');
-    // console.log(tokens);
-    // console.log(`Parsing...`)
-    var {error, ...parsed} = parseAnnotationTokens(tokens);
+const parseAnnotation = function(annotation) {
+  var {error: lexError, tokens} = tokenizeAnnotation(annotation);
+  if (lexError) { return {error: lexError}; }
+  var {error: parseError, ...parsed} = parseAnnotationTokens(tokens);
+  if (parseError) { return {error: parseError}; }
+  return parsed;
+}
+
+const runTests = function() {
+  var testAnnotations = [
+    '@hello(foo is bar[arg:TYPE])',
+    '@foo',
+    'sdfhu',
+    '  @reporter ( foo sfw wue   weif [ arg  : tyype]  ) ',
+    '  @reporter ( foo sfw wue   weif [ arg  : NUMBER]  ) ',
+    '@sdfbn/eiabn:()DF""',
+    '[[[[[[[[[[[[))))((((((((:shfuasnf123',
+    '@command(name of command [foo:STRING] continued name)',
+    ' @menu(foo) ',
+    ' @menu ( foo    )',
+    ' @menu ( foo    )   sdf',
+    '@menu(%$!adkf)',
+    '@menu( 89_foo)',
+    '@menu(89_foo)',
+    '@menu(_foo89)',
+    '@init',
+    '@init()',
+    '@init(foo)',
+    '@internal',
+    '@internal()',
+    '@command(name of command [foo:STRING:default string val] continued name [second:NUMBER] more name)',
+    '@command(name of command [foo:MENU])',
+    '@command(name of command [foo:MENU:])',
+    '@command(name of command [foo:MENU:8123])',
+    '@command(name of command [foo:MENU:bar])',
+    '@command(name of command [foo:MENU:  bar ])',
+  ]
+  
+  var testNum = 1;
+  testAnnotations.forEach(ann => {
+    console.log('----------------------------');
+    console.log(`Test ${testNum}`);
+    console.log('~~~~~~~~~~~~~~~');
+    console.log(`${ann}`)
+    // console.log(`Lexing...`)
+    var {tokens, error} = tokenizeAnnotation(ann);
     if (error) {
       console.log(`ERROR: ${error.message}`);
       console.log(`${ann}`);
       console.log(`${' '.repeat(error.location.start)}^~~~`);
     }
     else {
-      // console.log('Parsing successful:');
-      console.log(parsed);
+      // console.log('Lexing successful\n');
+      // console.log(tokens);
+      // console.log(`Parsing...`)
+      var {error, ...parsed} = parseAnnotationTokens(tokens);
+      if (error) {
+        console.log(`ERROR: ${error.message}`);
+        console.log(`${ann}`);
+        console.log(`${' '.repeat(error.location.start)}^~~~`);
+      }
+      else {
+        // console.log('Parsing successful:');
+        console.log(parsed);
+      }
     }
-  }
-  ++testNum;
-  console.log('----------------------------');
-  console.log('\n\n');
-});
+    ++testNum;
+    console.log('----------------------------');
+    console.log('\n\n');
+  });
+}
+
+export {
+  parseAnnotation as default,
+  tokenizeAnnotation,
+  parseAnnotationTokens
+};

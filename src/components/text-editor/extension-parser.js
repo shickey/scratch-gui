@@ -1,6 +1,7 @@
 import ArgumentType from './argument-type.js'
 import BlockType from './block-type.js'
 import {extensionDecl, blockDecl} from './extension-templates.js';
+import parseAnnotation from './annotation-parser.js'
 
 var esprima = require('esprima');
 var escodegen = require('escodegen');
@@ -32,99 +33,129 @@ const parseAnnotatedExtension = function(annotatedExtension) {
     comments.forEach(comment => {
       if (comment.type != "Line") { return; }
       if (comment.value.length === 0) { return; }
-      if (comment.value[0] != "@") { return; }
-
-      // Check for block annotation
-      var blockAnnotationMatches = comment.value.match(/^@(boolean|command|conditional|event|hat|loop|reporter)\((.+)\)\s*$/) // @TODO: support button type?
-      if (blockAnnotationMatches) {
-        // Parse the block text for arguments
-        var blockText = blockAnnotationMatches[2];
-        // @TODO: Check for more general argument errors (e.g., an untyped argument [foo])
-        var argRegex = /\[([a-zA-Z_]+)\:([a-zA-Z0-9_ ]+)\]/g; // We don't support 'IMAGE' type
-        var argumentMatches = blockText.matchAll(argRegex);
-        var args = {};
-        for (const match of argumentMatches) {
-          var type = match[2];
-          switch (type) {
-            case 'ANGLE': args[match[1]] = ArgumentType.ANGLE; break;
-            case 'BOOLEAN': args[match[1]] = ArgumentType.BOOLEAN; break;
-            case 'COLOR': args[match[1]] = ArgumentType.COLOR; break;
-            case 'NUMBER': args[match[1]] = ArgumentType.NUMBER; break;
-            case 'STRING': args[match[1]] = ArgumentType.STRING; break;
-            case 'MATRIX': args[match[1]] = ArgumentType.MATRIX; break;
-            case 'NOTE': args[match[1]] = ArgumentType.NOTE; break;
-            default: {
-              //                3 for //@                              2 for ( and [         1 for :
-              var columnStart = 3 + blockAnnotationMatches[1].length + 2 + match[1].length + 1 + match.index;
-              var argumentLoc = {
-                start: {line: comment.loc.start.line - 1, column: columnStart},
-                end: {line: comment.loc.end.line - 1, column: columnStart + match.length}
-              };
-              throw createParseError(`Unknown annotation argument type '${type}'. Must be one of: ANGLE, BOOLEAN, COLOR, NUMBER, STRING, MATRIX, NOTE`, argumentLoc);
-            }
-          }
-        }
-
-        var block = {
-          text: blockText.replace(argRegex, '[$1]'),
-          args: args,
-          loc:  comment.loc
-        };
-
-        switch (blockAnnotationMatches[1]) {
-          case 'boolean': block.type = BlockType.BOOLEAN; break;
-          case 'command': block.type = BlockType.COMMAND; break;
-          case 'conditional': block.type = BlockType.CONDITIONAL; break;
-          case 'event': block.type = BlockType.EVENT; break;
-          case 'hat': block.type = BlockType.HAT; break;
-          case 'loop': block.type = BlockType.LOOP; break;
-          case 'reporter': block.type = BlockType.REPORTER; break;
-          default: throw createParseError(`Annotation has unknown block type ${blockAnnotationMatches[1]}`, block.loc);
-        }
-
-        // Find the function for this annotation in the parse tree
-        var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
-          return statement.type == "FunctionDeclaration" && statement.loc.start.line == block.loc.start.line + 1;
-        });
-
-        if (annotatedFuncIdx === -1) {
-          // No matching function was found
-          var annotationLoc = block.loc
-          annotationLoc.start.line--;
-          annotationLoc.end.line--;
-          throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
-        }
-        
-        var annotatedFunc = mutableStatements[annotatedFuncIdx];
-
-        // Remove the function from the array
-        mutableStatements.splice(annotatedFuncIdx, 1);
-
-        var argNames = Object.keys(block.args);
-        if (argNames.length !== annotatedFunc.params.length) {
-          throw createParseError(`Annotation requires exactly ${argNames.length} arguments, but ${annotatedFunc.params.length} were given in the function.`, block.loc);
-        }
-        annotatedFunc.params.forEach(param => {
-          if (param.type != "Identifier") {
-            throw createParseError(`Annotated functions can only take named parameters (no default values or rest parameters)`, block.loc);
-          }
-        });
-        var paramNames = annotatedFunc.params.map(param => param.name);
-        argNames.forEach(argName => {
-          if (paramNames.indexOf(argName) == -1) {
-            throw createParseError(`Annotated function is missing argument "${argName}"`, block.loc);
-          }
-        });
-
-        // Attach the function parse tree to the annotation
-        block.opcode = annotatedFunc.id.name;
-        block.imp = annotatedFunc;
-
-        extensionInfo.blocks.push(block);
+      if (comment.value.trim()[0] != "@") { return; } // Make sure it starts with @
+      
+      var {error, ...parsed} = parseAnnotation(comment.value);
+      if (error) {
+        var errorLoc = comment.loc;
+        errorLoc.start.line--;
+        errorLoc.end.line--;
+        errorLoc.start.column = error.location.start + 2; // +2 accounts for the comment starting with '//'
+        errorLoc.end.column = error.location.end + 2;
+        throw createParseError(error.message, errorLoc);
       }
-      else {
-        var menuAnnotationMatches = comment.value.match(/^@menu\(([a-zA-Z_][a-zA-Z_0-9]*)\)$/);
-        if (menuAnnotationMatches) {
+      
+      switch(parsed.type) {
+        case 'block': {
+          
+          var blockInfo = {
+            text: parsed.text,
+            args: parsed.args,
+            loc: comment.loc,
+          }
+          
+          switch (parsed.blockType) {
+            case 'boolean': blockInfo.type = BlockType.BOOLEAN; break;
+            case 'command': blockInfo.type = BlockType.COMMAND; break;
+            case 'conditional': blockInfo.type = BlockType.CONDITIONAL; break;
+            case 'event': blockInfo.type = BlockType.EVENT; break;
+            case 'hat': blockInfo.type = BlockType.HAT; break;
+            case 'loop': blockInfo.type = BlockType.LOOP; break;
+            case 'reporter': blockInfo.type = BlockType.REPORTER; break;
+            default: throw createParseError(`Annotation has unknown block type ${parsed.blockType}`, blockInfo.loc);
+          }
+          
+          // Find the function for this annotation in the parse tree
+          var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
+            return statement.type == "FunctionDeclaration" && statement.loc.start.line == blockInfo.loc.start.line + 1;
+          });
+
+          if (annotatedFuncIdx === -1) {
+            // No matching function was found
+            var annotationLoc = blockInfo.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
+          }
+          
+          var annotatedFunc = mutableStatements[annotatedFuncIdx];
+
+          // Remove the function from the array
+          mutableStatements.splice(annotatedFuncIdx, 1);
+
+          var argNames = Object.keys(blockInfo.args);
+          if (argNames.length !== annotatedFunc.params.length) {
+            throw createParseError(`Annotation requires exactly ${argNames.length} arguments, but ${annotatedFunc.params.length} were given in the function.`, blockInfo.loc);
+          }
+          annotatedFunc.params.forEach(param => {
+            if (param.type != "Identifier") {
+              throw createParseError(`Annotated functions can only take named parameters (no default values or rest parameters)`, blockInfo.loc);
+            }
+          });
+          var paramNames = annotatedFunc.params.map(param => param.name);
+          argNames.forEach(argName => {
+            if (paramNames.indexOf(argName) == -1) {
+              throw createParseError(`Annotated function is missing argument "${argName}"`, blockInfo.loc);
+            }
+          });
+
+          // Attach the function parse tree to the annotation
+          blockInfo.opcode = annotatedFunc.id.name;
+          blockInfo.imp = annotatedFunc;
+
+          extensionInfo.blocks.push(blockInfo);
+          
+          break;
+        }
+        case 'init': {
+          // Find the function for this annotation in the parse tree
+          var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
+            return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
+          });
+
+          if (annotatedFuncIdx === -1) {
+            // No matching function was found
+            var annotationLoc = comment.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
+          }
+
+          if (extensionInfo.initializer !== null) {
+            // Multiple initializers were declared
+            var annotationLoc = comment.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, annotationLoc);
+          }
+          
+          extensionInfo.initializer = mutableStatements[annotatedFuncIdx];
+
+          // Remove the function from the array
+          mutableStatements.splice(annotatedFuncIdx, 1);
+          break;
+        }
+        case 'internal': {
+          // Find the function for this annotation in the parse tree
+          var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
+            return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
+          });
+
+          if (annotatedFuncIdx === -1) {
+            // No matching function was found
+            var annotationLoc = comment.loc
+            annotationLoc.start.line--;
+            annotationLoc.end.line--;
+            throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
+          }
+          
+          extensionInfo.internals.push(mutableStatements[annotatedFuncIdx]);
+
+          // Remove the function from the array
+          mutableStatements.splice(annotatedFuncIdx, 1);
+          break;
+        }
+        case 'menu': {
           // @TODO: Check for menu overwriting, nameless menus, probably more stuff
 
           var foundDecl = false;
@@ -135,7 +166,7 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 
           if (annotatedArrayIdx !== -1) {
             foundDecl = true;
-            extensionInfo.menus[menuAnnotationMatches[1]] = mutableStatements[annotatedArrayIdx];
+            extensionInfo.menus[parsed.name] = mutableStatements[annotatedArrayIdx];
             mutableStatements.splice(annotatedArrayIdx, 1); // Remove the array decl from the statements array
           }
 
@@ -160,60 +191,7 @@ const parseAnnotatedExtension = function(annotatedExtension) {
               annotationLoc.end.line--;
               throw createParseError(`Menu annotation must be attached to an array. (The array must start on the next line immediately after the annotation).`, annotationLoc);
           }
-        }
-        else {
-          // Check for block annotation
-          var initializerAnnotationMatches = comment.value.match(/^@init\s*$/);
-          if (initializerAnnotationMatches) {
-            // Find the function for this annotation in the parse tree
-            var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
-              return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
-            });
-
-            if (annotatedFuncIdx === -1) {
-              // No matching function was found
-              var annotationLoc = comment.loc
-              annotationLoc.start.line--;
-              annotationLoc.end.line--;
-              throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
-            }
-
-            if (extensionInfo.initializer !== null) {
-              // Multiple initializers were declared
-              var annotationLoc = comment.loc
-              annotationLoc.start.line--;
-              annotationLoc.end.line--;
-              throw createParseError(`Multiple initializer annotations found. Only one initializer is allowed.`, annotationLoc);
-            }
-            
-            extensionInfo.initializer = mutableStatements[annotatedFuncIdx];
-
-            // Remove the function from the array
-            mutableStatements.splice(annotatedFuncIdx, 1);
-          }
-
-          else {
-            var internalAnnotationMatches = comment.value.match(/^@internal\s*$/);
-            if (internalAnnotationMatches) {
-              // Find the function for this annotation in the parse tree
-              var annotatedFuncIdx = mutableStatements.findIndex((statement) => {
-                return statement.type == "FunctionDeclaration" && statement.loc.start.line == comment.loc.start.line + 1;
-              });
-
-              if (annotatedFuncIdx === -1) {
-                // No matching function was found
-                var annotationLoc = comment.loc
-                annotationLoc.start.line--;
-                annotationLoc.end.line--;
-                throw createParseError(`Annotation isn't attached to a function. (The function must start on the next line immediately after the annotation).`, annotationLoc);
-              }
-              
-              extensionInfo.internals.push(mutableStatements[annotatedFuncIdx]);
-
-              // Remove the function from the array
-              mutableStatements.splice(annotatedFuncIdx, 1);
-            }
-          }
+          break;
         }
       }
     });
