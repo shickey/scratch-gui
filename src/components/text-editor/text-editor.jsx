@@ -37,7 +37,7 @@ class TextEditor extends React.Component {
     this.loadExtensionIntoVm = this.loadExtensionIntoVm.bind(this);
     this.uploadExtension = this.uploadExtension.bind(this);
     this.downloadExtension = this.downloadExtension.bind(this);
-    this.downloadRawExtension = this.downloadRawExtension.bind(this);
+    this.downloadCompiledExtension = this.downloadCompiledExtension.bind(this);
     this.setFileInput = this.setFileInput.bind(this);
     this.handleFileInput = this.handleFileInput.bind(this);
     this.lint = this.lint.bind(this);
@@ -86,12 +86,16 @@ class TextEditor extends React.Component {
     return [];
   }
   
-  downloadRawExtension() {
+  downloadExtension() {
     var extensionBlob = new Blob([this.props.extensionJs], {type: 'application/javascript'});
     downloadBlob('myExtension.scx', extensionBlob);
   }
   
-  downloadExtension() {
+  uploadExtension() {
+    this.fileInput.click();
+  }
+  
+  downloadCompiledExtension() {
     var {parsed, error} = parseAnnotatedExtension(this.props.extensionJs);
     if (error !== null) {
       // @TODO: Display the error
@@ -104,21 +108,20 @@ class TextEditor extends React.Component {
     }
   }
   
-  uploadExtension() {
-    this.fileInput.click();
-  }
-  
   setFileInput (input) {
     this.fileInput = input;
   }
   
   handleFileInput(e) {
     const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.props.onUpdateExtensionJs(reader.result);
+    if (!!file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.props.onUpdateExtensionJs(reader.result);
+      }
+      reader.readAsText(file);
+      this.fileInput.value = null;
     }
-    reader.readAsText(file);
   }
 
   render() {
@@ -143,18 +146,6 @@ class TextEditor extends React.Component {
         <Box className={styles.extensionEditorHeader}>
           <div className={styles.extensionEditorButtonGroup}>
             <div className={styles.extensionEditorSaveLoadButtons}>
-              <Button 
-                className={styles.extensionEditorButton}
-                onClick={this.downloadRawExtension}
-                >
-                <div className={styles.extensionEditorButtonContent}>
-                  <img
-                    className={styles.extensionEditorButtonIcon}
-                    draggable={false}
-                    src={downloadCodeIcon}
-                  />
-                </div>
-              </Button>
               <Button 
                 className={styles.extensionEditorButton}
                 onClick={this.downloadExtension}
@@ -184,6 +175,18 @@ class TextEditor extends React.Component {
                       ref={this.setFileInput}
                       type="file"
                       onChange={this.handleFileInput}
+                  />
+                </div>
+              </Button>
+              <Button 
+                className={styles.extensionEditorButton}
+                onClick={this.downloadCompiledExtension}
+                >
+                <div className={styles.extensionEditorButtonContent}>
+                  <img
+                    className={styles.extensionEditorButtonIcon}
+                    draggable={false}
+                    src={downloadCodeIcon}
                   />
                 </div>
               </Button>
