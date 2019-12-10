@@ -54,6 +54,7 @@ class TextEditor extends React.Component {
       var extensionCode = createExtensionCode(parsed);
       if(!!vm) {
         var dataUri = `data:text/javascript,${extensionCode};`;
+        vm.setEditingExtensionInfo('myExtension', dataUri, this.props.extensionJs);
         var extensionManager = vm.extensionManager;
         if (this.extensionId === undefined) {
           extensionManager.loadExtensionURL(dataUri).then((extensionId) => {
