@@ -199,7 +199,9 @@ const parseAnnotatedExtension = function(annotatedExtension) {
     // All remaining statements and declarations become 'externals'
     // (i.e., they get added to the transpiled code before and outside the extension class)
     extensionInfo.externals = mutableStatements;
-
+    
+    console.log(extensionInfo);
+    
     return {
       parsed: extensionInfo,
       error: null
@@ -235,7 +237,7 @@ const createExtensionCode = function(extensionInfo) {
   var blockImps = [];
   extensionInfo.blocks.forEach(block => {
     var argsDecls = Object.keys(block.args).map(arg => {
-      if (block.args[arg] == ArgumentType.NUMBER) {
+      if (block.args[arg].type == ArgumentType.NUMBER) {
         return `var ${arg} = +(args.${arg});`;
       }
       return `var ${arg} = args.${arg};`;

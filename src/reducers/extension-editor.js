@@ -27,10 +27,15 @@ Putting it all together:
   {text: "one",   value: "1"},
   {text: "two",   value: "2"},
   {text: "three", value: "3"}
-]
+];
+
+//@reporter(My menu reporter [foo:STRING:#foo])
+function menuReporter(foo) {
+    return foo;
+}
 
 
-//@reporter(Hello [name:STRING])
+//@reporter(Hello [name:STRING:world])
 function hello(name) {
   return \`Hello \${name}!\`;
 }
@@ -88,12 +93,12 @@ must be one of:
 
 # Hotloading
 
-By pressing the "Load Extension" below, all
+By pressing the "Update Blocks" below, all
 annotated function with by loaded into the
 Scratch instance on the right (under the
-category "Test Extension"). After updating
+category "My Extension"). After updating
 function implementations in this editor,
-you can press "Load Extension" again to
+you can press "Update Blocks" again to
 immediately hotload your changes into Scratch.
 
 # Examples

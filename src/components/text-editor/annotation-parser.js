@@ -5,6 +5,7 @@ const TOKEN = {
   parenRight: 'parenRight',
   colon: 'colon',
   at: 'at',
+  hash: 'hash',
   text: 'text',
   whitespace: 'whitespace',
   end: 'end'
@@ -16,6 +17,17 @@ const ANNOTATION = {
   internal: 'internal',
   menu: 'menu'
 }
+
+const SCRATCH_ArgumentType = {
+  ANGLE: 'angle',
+  BOOLEAN: 'Boolean',
+  COLOR: 'color',
+  NUMBER: 'number',
+  STRING: 'string',
+  MATRIX: 'matrix',
+  NOTE: 'note',
+  IMAGE: 'image'
+};
 
 const tokenizeAnnotation = function(annotation) {
   
@@ -84,6 +96,22 @@ const tokenizeAnnotation = function(annotation) {
         }
         token = {
           type: TOKEN.at,
+          value: tokenizer.code.slice(tokenStart, tokenizer.cursor),
+          location: {
+            start: tokenStart,
+            end:tokenizer.cursor
+          }
+        }
+        break;
+      }
+      case "#": {
+        tokenizer.cursor++;
+        let tokenStart = tokenizer.cursor;
+        while(isText(current(tokenizer))) {
+          tokenizer.cursor++;
+        }
+        token = {
+          type: TOKEN.hash,
           value: tokenizer.code.slice(tokenStart, tokenizer.cursor),
           location: {
             start: tokenStart,
@@ -223,7 +251,7 @@ const parseAnnotationTokens = function(tokens) {
       return parseError(`Expected argument type`, token.stream.location);
     }
     var argType = tokenStream.current.value;
-    if (!['ANGLE', 'BOOLEAN', 'COLOR', 'NUMBER', 'STRING', 'MATRIX', 'NOTE', 'MENU'].includes(argType)) {
+    if (!['ANGLE', 'BOOLEAN', 'COLOR', 'NUMBER', 'STRING', 'MATRIX', 'NOTE'].includes(argType)) {
       return parseError(`Unknown annotation argument type '${argType}'. Must be one of: ANGLE, BOOLEAN, COLOR, NUMBER, STRING, MATRIX, NOTE`,
         tokenStream.current.location);
     }
@@ -231,33 +259,37 @@ const parseAnnotationTokens = function(tokens) {
     nextToken(tokenStream);
     consumeWhitespace(tokenStream);
     var argDefault = undefined;
-    if (argType == 'MENU') {
-      // Require a menu name
-      if (!requireToken(tokenStream, TOKEN.colon)) {
-        return parseError(`Menu argument requires a menu name`, tokenStream.current.location);
-      }
+    var argMenuName = undefined;
+    if (tokenStream.current.type === TOKEN.colon) {
+      // Optional default parameter OR menu name
       nextToken(tokenStream);
-      consumeWhitespace(tokenStream);
-      if (!requireToken(tokenStream, TOKEN.text)) {
-        return parseError(`Menu argument requires a menu name`, tokenStream.current.location);
+      if (tokenStream.current.type == TOKEN.hash || (tokenStream.current.type == TOKEN.whitespace && tokenStream.peek.type == TOKEN.hash)) {
+        consumeWhitespace(tokenStream);
+        if (!requireToken(tokenStream, TOKEN.hash)) {
+          // This shouldn't ever happen!
+          return parseError(`Internal parser error. Expected a menu hash token but didn't find one. This is a parser bug!!`, tokenStream.current.location);
+        }
+        argMenuName = tokenStream.current.value;
+        if (argMenuName.length === 0) {
+          return parseError(`Menu argument requires a menu name`, tokenStream.current.location);
+        }
+        if (!isValidIdent(argMenuName)) {
+          return parseError('Menu name must begin with letter or underscore and contain only letters, numbers, and underscores',
+          tokenStream.current.location);
+        }
+        nextToken(tokenStream);
+        consumeWhitespace(tokenStream);
       }
-      argDefault = readString(tokenStream).trim(); // Trim whitepsace off the end
-      if (!isValidIdent(argDefault)) {
-        return parseError('Menu name must begin with letter or underscore and contain only letters, numbers, and underscores',
-        tokenStream.current.location);
+      else {
+        if (!requireToken(tokenStream, TOKEN.text) && !requireToken(tokenStream, TOKEN.whitespace)) {
+          // @TODO: Currently we only accept text default params
+          //        We should allow numbers as well (and maybe colors as hex value, etc.?)
+          //        We could also do more clever error type checking here to make sure the
+          //        default is actually matches the argument type
+          return parseError(`Expected default value for argument`, tokenStream.current.location);
+        }
+        argDefault = readString(tokenStream);
       }
-    }
-    else if (tokenStream.current.type === TOKEN.colon) {
-      // Optional default parameter
-      nextToken(tokenStream);
-      if (!requireToken(tokenStream, TOKEN.text) && !requireToken(tokenStream, TOKEN.whitespace)) {
-        // @TODO: Currently we only accept text default params
-        //        We should allow numbers as well (and maybe colors as hex value, etc.?)
-        //        We could also do more clever error type checking here to make sure the
-        //        default is actually matches the argument type
-        return parseError(`Expected default value for argument`, tokenStream.current.location);
-      }
-      argDefault = readString(tokenStream);
     }
     if (!requireToken(tokenStream, TOKEN.bracketRight)) {
       return parseError(`Expected argument declaration to end with ]`, tokenStream.current.location);
@@ -267,12 +299,24 @@ const parseAnnotationTokens = function(tokens) {
     var result = {
       arg: {
         name: argName,
-        type: argType
       }
     }
     
+    switch(argType) {
+      case 'ANGLE': result.arg.type = SCRATCH_ArgumentType.ANGLE; break;
+      case 'BOOLEAN': result.arg.type = SCRATCH_ArgumentType.BOOLEAN; break;
+      case 'COLOR': result.arg.type = SCRATCH_ArgumentType.COLOR; break;
+      case 'NUMBER': result.arg.type = SCRATCH_ArgumentType.NUMBER; break;
+      case 'STRING': result.arg.type = SCRATCH_ArgumentType.STRING; break;
+      case 'MATRIX': result.arg.type = SCRATCH_ArgumentType.MATRIX; break;
+      case 'NOTE': result.arg.type = SCRATCH_ArgumentType.NOTE; break;
+    }
+    
     if (argDefault) {
-      result.arg.default = argDefault;
+      result.arg.defaultValue = argDefault;
+    }
+    else if (argMenuName) {
+      result.arg.menu = argMenuName;
     }
     
     return result;
@@ -305,8 +349,11 @@ const parseAnnotationTokens = function(tokens) {
           
           blockText += `[${arg.name}]`;
           blockArgs[arg.name] = { type: arg.type };
-          if (arg.default) {
-            blockArgs[arg.name].defaultValue = arg.default;
+          if (arg.defaultValue) {
+            blockArgs[arg.name].defaultValue = arg.defaultValue;
+          }
+          if (arg.menu) {
+            blockArgs[arg.name].menu = arg.menu;
           }
           break;
         }
@@ -475,11 +522,12 @@ const runTests = function() {
     '@internal',
     '@internal()',
     '@command(name of command [foo:STRING:default string val] continued name [second:NUMBER] more name)',
-    '@command(name of command [foo:MENU])',
-    '@command(name of command [foo:MENU:])',
-    '@command(name of command [foo:MENU:8123])',
-    '@command(name of command [foo:MENU:bar])',
-    '@command(name of command [foo:MENU:  bar ])',
+    '@command(name of command [foo:STRING:#])',
+    '@command(name of command [foo:STRING:#8123])',
+    '@command(name of command [foo:STRING:#bar])',
+    '@command(name of command [ foo : STRING :# bar ] )',
+    '@command(name of command [ foo : STRING : # bar ] )',
+    '@command(name of command [ foo : STRING : #bar ] )',
   ]
   
   var testNum = 1;
@@ -487,7 +535,7 @@ const runTests = function() {
     console.log('----------------------------');
     console.log(`Test ${testNum}`);
     console.log('~~~~~~~~~~~~~~~');
-    console.log(`${ann}`)
+    console.log(`${ann}\n`)
     // console.log(`Lexing...`)
     var {tokens, error} = tokenizeAnnotation(ann);
     if (error) {

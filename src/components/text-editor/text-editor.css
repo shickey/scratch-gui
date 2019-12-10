@@ -6,14 +6,85 @@
   position: relative;
   height: 100%;
   width: 100%;
+  padding-bottom: 3.0rem;
+  
 }
 
 .extension-editor-header {
-  height: 10%;
+  padding-top: .5rem;
 }
 
 .extension-editor-text-area {
   position: relative;
-  height: 90%;
+  height: 100%;
   width: 100%;
+  border: 1px solid $ui-black-transparent;
+  border-top-right-radius: $space;
+  border-bottom-right-radius: $space;
+  background-color: $ui-white;
+  overflow: hidden;
+}
+
+.extension-editor-button {
+  display: inline-block;
+  border: 1px solid $ui-black-transparent;
+  border-radius: $form-radius;
+  background: $ui-white;
+  padding: 0.375rem;
+  user-select: none;
+  cursor: pointer;
+}
+
+.extension-editor-button:hover {
+  filter: brightness(95%);
+}
+
+.extension-editor-button:active {
+  filter: brightness(85%);
+}
+
+.extension-editor-button-content {
+  display: flex;
+  align-items: center;
+}
+
+.extension-editor-button-icon {
+  height: 1.6rem;
+  width: 1.6rem;
+  margin-right: 3px;
+}
+
+.extension-editor-button-group {
+  display: flex;
+  justify-content: space-between;
+  padding-left: .5rem;
+}
+
+.extension-editor-save-load-buttons {
+  width: 50%;
+}
+
+.extension-editor-save-load-buttons .extension-editor-button {
+  border-radius: 0;
+  border-left: none;
+}
+
+.extension-editor-save-load-buttons .extension-editor-button:first-of-type {
+  border-top-left-radius: $form-radius;
+  border-bottom-left-radius: $form-radius;
+  border-left: 1px solid $ui-black-transparent;
+}
+
+.extension-editor-save-load-buttons .extension-editor-button:last-of-type {
+  border-top-right-radius: $form-radius;
+  border-bottom-right-radius: $form-radius;
+}
+
+.extension-editor-update-button {
+  background: $motion-primary;
+  color: $ui-white;
+}
+
+.file-input {
+    display: none;
 }

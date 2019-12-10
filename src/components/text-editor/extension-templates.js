@@ -3,15 +3,9 @@ const blockDecl = function(opcode, type, label, args) {
     opcode: opcode,
     blockType: type,
     text: label,
-    arguments: {}
+    arguments: args
   };
-
-  for (var argName in args) {
-    block.arguments[argName] = {
-      type: args[argName]
-    };
-  }
-
+  
   return JSON.stringify(block);
 }
 
@@ -28,26 +22,10 @@ class MyExtension {
   getInfo() {
     return {
       id: 'myExtension',
-      name: 'Test Extension',
-      blocks: [${blockDecls.join(',')},
-        {
-          "opcode": "menuTest",
-          "blockType": "reporter",
-          "text": "menu test [m]",
-          "arguments": {
-            "m" : {
-              "type": "string",
-              "menu": "foo"
-            }
-          }
-        }
-      ],
+      name: 'My Extension',
+      blocks: [${blockDecls.join(',')}],
       menus: ${menusDecl}
     }
-  }
-
-  menuTest(args) {
-    return args.m;
   }
   
   ${blockImps.join('\n\n')}
@@ -55,7 +33,8 @@ class MyExtension {
   ${internals.join('\n\n')}
 }
 
-Scratch.extensions.register(new MyExtension());`
+Scratch.extensions.register(new MyExtension());
+`
   )
 }
 
