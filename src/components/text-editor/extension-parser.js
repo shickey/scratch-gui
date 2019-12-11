@@ -1,6 +1,6 @@
 import ArgumentType from './argument-type.js'
 import BlockType from './block-type.js'
-import {extensionDecl, blockDecl} from './extension-templates.js';
+import {extensionDecl, blockDecl, workerExtensionWrapper, mainThreadExtensionWrapper} from './extension-templates.js';
 import parseAnnotation from './annotation-parser.js'
 
 var esprima = require('esprima');
@@ -200,8 +200,6 @@ const parseAnnotatedExtension = function(annotatedExtension) {
     // (i.e., they get added to the transpiled code before and outside the extension class)
     extensionInfo.externals = mutableStatements;
     
-    console.log(extensionInfo);
-    
     return {
       parsed: extensionInfo,
       error: null
@@ -230,7 +228,7 @@ const parseAnnotatedExtension = function(annotatedExtension) {
 const createExtensionCode = function(extensionInfo) {
   var initializer = null;
   if (extensionInfo.initializer != null) {
-    initializer = `constructor() ${escodegen.generate(extensionInfo.initializer.body)}`;
+    initializer = `constructor(runtime) {\nthis.runtime = runtime;\n\n${escodegen.generate(extensionInfo.initializer.body)}\n}`;
   }
 
   var blockDecls = [];
@@ -291,7 +289,7 @@ const createExtensionCode = function(extensionInfo) {
 
   var menusDecl = `{${menusDecls.join(',\n')}}`;
 
-  return jsBeautify(extensionDecl(externals, internals, initializer, blockDecls, blockImps, menusDecl, menuFuncs));
+  return jsBeautify(mainThreadExtensionWrapper(extensionDecl(externals, internals, initializer, blockDecls, blockImps, menusDecl, menuFuncs)));
 }
 
 export {

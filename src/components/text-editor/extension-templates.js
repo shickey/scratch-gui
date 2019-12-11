@@ -32,13 +32,46 @@ class MyExtension {
 
   ${internals.join('\n\n')}
 }
+`
+  )
+}
+
+const workerExtensionWrapper = function(extensionCode) {
+  return (
+`${extensionCode}
 
 Scratch.extensions.register(new MyExtension());
 `
   )
 }
 
+const mainThreadExtensionWrapper = function(extensionCode) {
+  return (
+`
+window.ScratchExtensions = window.ScratchExtensions || {
+  extensionToLoad: null,
+  error: null
+};
+
+(function() {
+  try {
+    ${extensionCode};
+    
+    window.ScratchExtensions.extensionToLoad = MyExtension;
+  }
+  catch(e) {
+    window.ScratchExtensions.extensionToLoad = null;
+    window.ScratchExtensions.error = e;
+    return;
+  }
+})();
+`  
+  )
+}
+
 export {
   blockDecl,
-  extensionDecl
+  extensionDecl,
+  workerExtensionWrapper,
+  mainThreadExtensionWrapper
 };
