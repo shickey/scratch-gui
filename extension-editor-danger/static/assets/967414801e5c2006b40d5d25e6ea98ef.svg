@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.2.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   width="512px"
+   height="512px"
+   viewBox="0 0 512 512"
+   enable-background="new 0 0 512 512"
+   xml:space="preserve"
+   sodipodi:docname="icon--load.svg"
+   inkscape:version="0.92.2 5c3e80d, 2017-08-06"><metadata
+     id="metadata13"><rdf:RDF><cc:Work
+         rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" /></cc:Work></rdf:RDF></metadata><defs
+     id="defs11" /><sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="759"
+     inkscape:window-height="480"
+     id="namedview9"
+     showgrid="false"
+     inkscape:zoom="0.4609375"
+     inkscape:cx="256"
+     inkscape:cy="256"
+     inkscape:window-x="749"
+     inkscape:window-y="303"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g6" /><g
+     id="g6"><path
+       d="M255.988,32C160.473,32,78.934,91.804,46.727,176h34.639c9.396-20.484,22.457-39.35,38.868-55.762   C156.497,83.973,204.709,64,255.988,64c51.286,0,99.504,19.973,135.771,56.239C428.027,156.505,448,204.719,448,256   c0,51.285-19.973,99.501-56.239,135.765C355.494,428.029,307.275,448,255.988,448c-51.281,0-99.493-19.971-135.755-56.234   C103.821,375.354,90.76,356.486,81.362,336H46.725c32.206,84.201,113.746,144,209.264,144C379.703,480,480,379.715,480,256   C480,132.298,379.703,32,255.988,32z"
+       id="path2"
+       style="fill:#ffffff" /><polygon
+       points="206.863,323.883 229.49,346.51 320,256 229.49,165.49 206.862,188.118 258.745,240 32,240 32,272 258.745,272  "
+       id="polygon4"
+       style="fill:#ffffff" /></g></svg>
