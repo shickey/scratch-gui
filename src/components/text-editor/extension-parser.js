@@ -230,6 +230,9 @@ const createExtensionCode = function(extensionInfo) {
   if (extensionInfo.initializer != null) {
     initializer = `constructor(runtime) {\nthis.runtime = runtime;\n\n${escodegen.generate(extensionInfo.initializer.body)}\n}`;
   }
+  else {
+    initializer = `constructor(runtime) { this.runtime = runtime; }`;
+  }
 
   var blockDecls = [];
   var blockImps = [];
