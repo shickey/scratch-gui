@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stage</title>
+</head>
+<style type="text/css">
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+    width: 100%;
+    height: 100vh;
+  }
+  
+  img#stage {
+    min-height: 100%;
+    margin: 0 auto;
+    display: block;
+  }
+</style>
+<body>
+  <img src="#" id="stage" />
+</body>
+<script type="text/javascript">
+  var channel = new BroadcastChannel('stage-image');
+  var imageTag = document.getElementById('stage');
+  console.log(imageTag);
+  channel.onmessage = (msg) => {
+    imageTag.src = msg.data.dataURI;
+  }
+
+  var addConnection = function(connection) {
+    connection.onmessage = function (message) {
+			console.log(message.data);
+			imageTag.src = message.data
+    };
+  };
+
+  navigator.presentation.receiver.connectionList.then(function (list) {
+    list.connections.map(function (connection) {
+      addConnection(connection);
+    });
+    list.onconnectionavailable = function (evt) {
+      addConnection(evt.connection);
+    };
+  });
+</script>
+</html>

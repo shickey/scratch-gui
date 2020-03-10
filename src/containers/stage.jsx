@@ -63,6 +63,24 @@ class Stage extends React.Component {
             // Only attach a video provider once because it is stateful
             this.props.vm.setVideoProvider(new VideoProvider());
 
+            navigator.presentation.defaultRequest = new PresentationRequest('/external-stage/index.html');
+			navigator.presentation.defaultRequest.onconnectionavailable = (conn) => {
+				conn.connection.onconnect = (c) => {
+					this.presentationConnection = c.target;
+				};
+			};
+			this.renderer.on('RENDERER_WILL_DRAW', () => {
+				this.renderer.requestSnapshot((imgData) => {
+					if (this.presentationConnection) {
+						if (this.presentationConnection.state !== 'connected') {
+							this.presentationConnection = null;
+							return;
+						}
+						this.presentationConnection.send(imgData);
+					}
+				});
+			});
+
             // Calling draw a single time before any project is loaded just makes
             // the canvas white instead of solid black–needed because it is not
             // possible to use CSS to style the canvas to have a different
