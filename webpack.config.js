@@ -172,6 +172,10 @@ module.exports = [
                 to: 'external-stage/index.html'
             }]),
             new CopyWebpackPlugin([{
+                from: 'src/underwater.png',
+                to: 'external-stage/underwater.png'
+            }]),
+            new CopyWebpackPlugin([{
                 from: 'node_modules/scratch-blocks/media',
                 to: 'static/blocks-media'
             }]),

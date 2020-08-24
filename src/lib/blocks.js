@@ -290,9 +290,11 @@ export default function (vm) {
     };
 
     ScratchBlocks.Blocks.sensing_touchingobjectmenu.init = function () {
+        const any = 'any sprite';
         const mouse = ScratchBlocks.ScratchMsgs.translate('SENSING_TOUCHINGOBJECT_POINTER', 'mouse-pointer');
         const edge = ScratchBlocks.ScratchMsgs.translate('SENSING_TOUCHINGOBJECT_EDGE', 'edge');
         const json = jsonForMenuBlock('TOUCHINGOBJECTMENU', spriteMenu, sensingColors, [
+            [any, '_any_'],
             [mouse, '_mouse_'],
             [edge, '_edge_']
         ]);

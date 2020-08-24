@@ -54,32 +54,39 @@ class Stage extends React.Component {
         };
         if (this.props.vm.renderer) {
             this.renderer = this.props.vm.renderer;
+            // this.canvas = canvas;
             this.canvas = this.renderer.canvas;
         } else {
+            
             this.canvas = document.createElement('canvas');
-            this.renderer = new Renderer(this.canvas);
+            this.canvas.setAttribute('width', 1920);
+            this.canvas.setAttribute('height', 1080);
+            this.renderer = new Renderer(this.canvas, -960, 960, -540, 540);
             this.props.vm.attachRenderer(this.renderer);
 
             // Only attach a video provider once because it is stateful
             this.props.vm.setVideoProvider(new VideoProvider());
 
-            navigator.presentation.defaultRequest = new PresentationRequest('/external-stage/index.html');
+            navigator.presentation.defaultRequest = new PresentationRequest('./external-stage/index.html');
 			navigator.presentation.defaultRequest.onconnectionavailable = (conn) => {
 				conn.connection.onconnect = (c) => {
 					this.presentationConnection = c.target;
 				};
 			};
-			this.renderer.on('RENDERER_WILL_DRAW', () => {
-				this.renderer.requestSnapshot((imgData) => {
-					if (this.presentationConnection) {
-						if (this.presentationConnection.state !== 'connected') {
-							this.presentationConnection = null;
-							return;
-						}
-						this.presentationConnection.send(imgData);
-					}
-				});
-			});
+            
+            this.renderer.on('RENDERER_WILL_DRAW', () => {
+                
+                this.renderer.requestSnapshot((imgData) => {
+                 if (this.presentationConnection) {
+                     if (this.presentationConnection.state !== 'connected') {
+                         this.presentationConnection = null;
+                         return;
+                     }
+                     this.presentationConnection.send(imgData);
+                 }
+                });
+                
+            });
 
             // Calling draw a single time before any project is loaded just makes
             // the canvas white instead of solid black–needed because it is not
@@ -112,7 +119,7 @@ class Stage extends React.Component {
             this.stopColorPickingLoop();
         }
         this.updateRect();
-        this.renderer.resize(this.rect.width, this.rect.height);
+        // this.renderer.resize(this.rect.width, this.rect.height);
     }
     componentWillUnmount () {
         this.detachMouseEvents(this.canvas);

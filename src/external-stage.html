@@ -12,27 +12,52 @@
     height: 100vh;
   }
   
-  img#stage {
-    min-height: 100%;
+  canvas#stage {
+    width: 100%;
     margin: 0 auto;
     display: block;
   }
 </style>
 <body>
-  <img src="#" id="stage" />
+  <canvas id="stage" width="1920" height="1080"></canvas>
 </body>
 <script type="text/javascript">
   var channel = new BroadcastChannel('stage-image');
-  var imageTag = document.getElementById('stage');
-  console.log(imageTag);
+  
+  var canvas = document.getElementById('stage');
+  var ctx = canvas.getContext('2d');
+  ctx.transform(1, 0, 0, -1, 0, canvas.height);
+  
+  var width = 1920;
+  var height = 1080;
+  var stride = width * 4;
+  
+  // Create a (reusable) buffer for flipping the WebGL pixel data before rendering it
+  var flipped = new Uint8ClampedArray(width * height * 4);
+  
   channel.onmessage = (msg) => {
-    imageTag.src = msg.data.dataURI;
+    var imgData = new Uint8Array(msg.data);
+    
+    // Flip y
+    for (var i = 0; i < height; ++i) {
+      flipped.set(imgData.subarray((height - 1 - i) * stride, (height - i) * stride), i * stride);
+    }
+    
+    var flippedData = new ImageData(flipped, width, height);
+    ctx.putImageData(flippedData, 0, 0);
   }
 
   var addConnection = function(connection) {
     connection.onmessage = function (message) {
-			console.log(message.data);
-			imageTag.src = message.data
+      var imgData = new Uint8Array(message.data);
+    
+      // Flip y
+      for (var i = 0; i < height; ++i) {
+        flipped.set(imgData.subarray((height - 1 - i) * stride, (height - i) * stride), i * stride);
+      }
+      
+      var flippedData = new ImageData(flipped, width, height);
+      ctx.putImageData(flippedData, 0, 0);
     };
   };
 
